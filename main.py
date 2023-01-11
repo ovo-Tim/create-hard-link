@@ -2,15 +2,44 @@
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
+
 import sys
 import os
 import ntpath
 import hashlib
 import copy
 
-
 from ui import mainWindow
 
+translator = QTranslator()  # 加载翻译器
+translator.load(
+    QLocale.system().name(),
+    os.path.dirname(os.path.abspath(__file__)) + "/translate",
+)
+
+
+class ProgressBar(QDialog):
+    def __init__(self,min=0,max=100,init=0,  parent=None):
+        super(ProgressBar, self).__init__(parent)
+ 
+        # Qdialog窗体的设置
+        self.resize(500, 32) # QDialog窗的大小
+ 
+        # 创建并设置 QProcessbar
+        self.progressBar = QProgressBar(self) # 创建
+        self.progressBar.setMinimum(min) #设置进度条最小值
+        self.progressBar.setMaximum(max)  # 设置进度条最大值
+        self.progressBar.setValue(init)  # 进度条初始值为0
+        self.progressBar.setGeometry(QRect(1, 3, 499, 28)) # 设置进度条在 QDialog 中的位置 [左，上，右，下]
+        self.show()
+ 
+    def setValue(self,task_number,total_task_number, value): # 设置总任务进度和子任务进度
+        if task_number=='0' and total_task_number=='0': 
+            self.setWindowTitle(self.tr('正在处理中'))
+        else:
+            label = "正在处理：" + "第" + str(task_number) + "/" + str(total_task_number)+'个任务'
+            self.setWindowTitle(self.tr(label)) # 顶部的标题
+        self.progressBar.setValue(value)
 
 def checksum(filename, hash_factory=hashlib.md5, chunk_num_blocks=128):
     h = hash_factory()
@@ -41,13 +70,21 @@ def get_same_file(root_path, file_list, dir_list, same_file, min_size=0):
                     same_file[dir_file] = [dir_file_path]
 
 
-def check_files(v, same_file_md5):
+def check_files(v, same_file_md5,ProgressBar):
+    if ProgressBar:
+        bar=ProgressBar(0,len(v))
+    now = 0
     for i in v:
+        now+=1
         # print(i)
         if checksum(i) in same_file_md5.keys():
             same_file_md5[checksum(i)].append(i)
         else:
             same_file_md5[checksum(i)] = [i]
+        if ProgressBar:
+            bar.setValue(str(now), str(len(v)),now)  # 更新进度条的值
+    if ProgressBar:
+        bar.close
     temp = copy.copy(same_file_md5)
     for k, v in temp.items():
         if len(v) == 1:
@@ -73,14 +110,20 @@ def scan(url, quickly=True, min_size=0):
 
     if quickly:
         same_file = list(same_file.values())
+        bar=ProgressBar(0,len(same_file))
+        now = 0
         for v in same_file:
+            now+=1
             if len(v) <= 1:
                 # same_file.remove(v)
                 continue
-            check_files(v, same_file_md5)
+            check_files(v, same_file_md5,False)
+            bar.setValue(str(now), str(len(same_file)),now)  # 更新进度条的值
+            QApplication.processEvents()
+        bar.close
     else:
 
-        check_files(file_list, same_file_md5)
+        check_files(file_list, same_file_md5,True)
 
     print(same_file_md5)
     return same_file_md5
@@ -99,11 +142,18 @@ class main(QMainWindow, mainWindow):
         self.start_scan.clicked.connect(self.n_scan)
 
     def link_file(self):
+        now=0
+        bar=ProgressBar(0,len(list(self.same_file_md5.values())))
         for j in list(self.same_file_md5.values()):
+            now+=1
+            bar.setValue(str(now), str(len(list(self.same_file_md5.values()))),now)  # 更新进度条的值
             for i in j[1:]:
                 print(i)
                 os.remove(i)
                 os.link(j[0], i)
+                QApplication.processEvents()  # 实时刷新显示
+        bar.close
+        QMessageBox.information(self,self.tr("完成"),self.tr("链接已创建完成"))
 
     def q_scan(self):  # 快扫
         self.link = self.links.text()
@@ -111,7 +161,7 @@ class main(QMainWindow, mainWindow):
         self.same_file_md5 = scan(self.link, True, int(self.min_size_num))
         self.fill_table(self.same_file_md5)
 
-    def n_scan(self):  # 快扫
+    def n_scan(self):  # 慢扫
         self.link = self.links.text()
         self.min_size_M = int(self.min_size.text())
         self.same_file_md5 = scan(self.link, False, self.min_size_M)
@@ -119,7 +169,11 @@ class main(QMainWindow, mainWindow):
 
     def fill_table(self, same_file_md5):
         # same_file_md5 结构 “md5”:["第一个文件路径"，"第二个文件路径"，"第三个文件路径"，……]
+        now=0
+        bar=ProgressBar(0,len(same_file_md5.items()))
+        mx=2
         for k, v in same_file_md5.items():
+            now+=1
             # 增加一行
             # row = self.tableWidget.currentRow()
             row = self.tableWidget.rowCount()
@@ -131,17 +185,23 @@ class main(QMainWindow, mainWindow):
                 str(os.path.getsize(v[0]))+"M"))
 
             # 增加一行中每个元素
-            self.tableWidget.setColumnCount(len(v)+2)  # 增加列数
+            if mx<(len(v)+2):
+                mx=len(v)+2
+                self.tableWidget.setColumnCount(len(v)+2)  # 增加列数
             for i in range(len(v)):
-                item = QTableWidgetItem("文件"+str(i+1))
+                item = QTableWidgetItem(self.tr( "文件")+str(i+1))
                 self.tableWidget.setHorizontalHeaderItem(i+2, item)
                 item = QTableWidgetItem(str(v[i]))
                 self.tableWidget.setItem(row, i+2, item)
                 print(row, i+2, str(v[i]))
+                QApplication.processEvents()
 
             # 根据内容自动调整单元格大小
             self.tableWidget.resizeColumnsToContents()
             self.tableWidget.resizeRowsToContents()
+            bar.setValue(str(now), str(len(same_file_md5.items())),now)  # 更新进度条的值
+        bar.close
+
 
 
 app = QApplication(sys.argv)
