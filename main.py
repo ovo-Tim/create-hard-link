@@ -17,6 +17,7 @@ translator.load(
     os.path.dirname(os.path.abspath(__file__)) + "/translate",
 )
 
+
 class ProgressBar(QDialog):
     def __init__(self,min=0,max=100,init=0,  parent=None):
         super(ProgressBar, self).__init__(parent)
@@ -36,7 +37,7 @@ class ProgressBar(QDialog):
         if task_number=='0' and total_task_number=='0': 
             self.setWindowTitle(self.tr('正在处理中'))
         else:
-            label = "正在处理：" + "第" + str(task_number) + "/" + str(total_task_number)+'个任务'
+            label = self.tr("正在处理：") + self.tr("第") + str(task_number) + "/" + str(total_task_number)+self.tr('个任务')
             self.setWindowTitle(self.tr(label)) # 顶部的标题
         self.progressBar.setValue(value)
 
@@ -168,9 +169,9 @@ class main(QMainWindow, mainWindow):
 
     def fill_table(self, same_file_md5):
         # same_file_md5 结构 “md5”:["第一个文件路径"，"第二个文件路径"，"第三个文件路径"，……]
-        now=0
-        bar=ProgressBar(0,len(same_file_md5.items()))
-        mx=2
+        now=0 #目前进行的任务
+        bar=ProgressBar(0,len(same_file_md5.items())) #进度条控件
+        mx=2 #最大列数
         for k, v in same_file_md5.items():
             now+=1
             # 增加一行
@@ -188,7 +189,7 @@ class main(QMainWindow, mainWindow):
                 mx=len(v)+2
                 self.tableWidget.setColumnCount(len(v)+2)  # 增加列数
             for i in range(len(v)):
-                item = QTableWidgetItem(self.tr( "文件")+str(i+1))
+                item = QTableWidgetItem(self.tr( "文件")+str(i+1)) #增加表头
                 self.tableWidget.setHorizontalHeaderItem(i+2, item)
                 item = QTableWidgetItem(str(v[i]))
                 self.tableWidget.setItem(row, i+2, item)
