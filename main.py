@@ -17,7 +17,6 @@ translator.load(
     os.path.dirname(os.path.abspath(__file__)) + "/translate",
 )
 
-
 class ProgressBar(QDialog):
     def __init__(self,min=0,max=100,init=0,  parent=None):
         super(ProgressBar, self).__init__(parent)
