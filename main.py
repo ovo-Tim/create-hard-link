@@ -9,6 +9,7 @@ import ntpath
 import hashlib
 import copy
 
+from qt_material import apply_stylesheet
 from ui import mainWindow
 
 translator = QTranslator()  # 加载翻译器
@@ -206,6 +207,7 @@ class main(QMainWindow, mainWindow):
 
 app = QApplication(sys.argv)
 window = main()
+apply_stylesheet(app, theme='dark_teal.xml')
 window.show()
 # scan("/home/tim/TX/", False)
 sys.exit(app.exec_())
