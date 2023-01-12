@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
 import sys
 import os
@@ -210,4 +210,4 @@ window = main()
 apply_stylesheet(app, theme='dark_teal.xml')
 window.show()
 # scan("/home/tim/TX/", False)
-sys.exit(app.exec_())
+sys.exit(app.exec())
